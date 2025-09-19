@@ -16,19 +16,30 @@ class User(AbstractModel, table=True):
     username: str = Field(index=True, unique=True, min_length=3, max_length=50)
     email: str = Field(index=True, unique=True)  # ✅ use str in DB
     full_name: Optional[str] = Field(default=None, max_length=100)
+    password : str = Field(max_length=200)
     bio: Optional[str] = Field(default=None, max_length=300)
     followers_count: int = Field(default=0)
     following_count: int = Field(default=0)
     is_banned: bool = Field(default=False)
     is_active: bool = Field(default=True)
-    is_delete : bool
-    deleted_at : datetime | None
+    is_delete: bool | None = Field(default = None)
+    deleted_at : datetime | None = Field(default=None)
 
     # relationships
     posts: List["Post"] = Relationship(back_populates="author")
     comments: List["Comment"] = Relationship(back_populates="user")
     liked_posts: List["PostLike"] = Relationship(back_populates="user")
     blocked_users: List["BlockedUser"] = Relationship(back_populates="blocker")
+    
+    # ✅ must wrap in sa_relationship_kwargs
+    blocked_users: List["BlockedUser"] = Relationship(
+        back_populates="blocker",
+        sa_relationship_kwargs={"foreign_keys": "BlockedUser.blocker_id"},
+    )
+    blocked_by: List["BlockedUser"] = Relationship(
+        back_populates="blocked",
+        sa_relationship_kwargs={"foreign_keys": "BlockedUser.blocked_id"},
+    )
 
 
 class BlockedUser(AbstractModel, table=True):
@@ -37,8 +48,17 @@ class BlockedUser(AbstractModel, table=True):
     blocker_id: UUID = Field(foreign_key="userprofile.id")
     blocked_id: UUID = Field(foreign_key="userprofile.id")
 
-    blocker: Optional[User] = Relationship(back_populates="blocked_users")
-    blocked: Optional[User] = Relationship()
+    blocker: Optional[User] = Relationship(back_populates="blocked_by")
+    blocked: Optional[User] = Relationship(back_populates="blocked_user")
+    
+    blocker: Optional[User] = Relationship(
+        back_populates="blocked_users",
+        sa_relationship_kwargs={"foreign_keys": "BlockedUser.blocker_id"},
+    )
+    blocked: Optional[User] = Relationship(
+        back_populates="blocked_by",
+        sa_relationship_kwargs={"foreign_keys": "BlockedUser.blocked_id"},
+    )
 
 
 class Post(AbstractModel, table=True):
@@ -56,8 +76,8 @@ class Post(AbstractModel, table=True):
     caption: Optional[str] = Field(default=None, max_length=1000)
 
     author_id: UUID = Field(foreign_key="userprofile.id")
-    is_delete : bool
-    deleted_at : datetime | None
+    is_delete: bool | None = Field(default = None)
+    deleted_at : datetime | None = Field(default=None)
 
     author: Optional[User] = Relationship(back_populates="posts")
     comments: List["Comment"] = Relationship(back_populates="post")
@@ -77,8 +97,8 @@ class Comment(AbstractModel, table=True):
 
     user: Optional[User] = Relationship(back_populates="comments")
     post: Optional[Post] = Relationship(back_populates="comments")
-    is_delete : bool
-    deleted_at : datetime | None
+    is_delete: bool | None = Field(default = None)
+    deleted_at : datetime | None = Field(default=None)
 
     parent_comment: Optional["Comment"] = Relationship(
         back_populates="replies",

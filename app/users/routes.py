@@ -13,10 +13,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.auth.auth_bearer import JWTBearer
 from pydantic import ValidationError
 
-router = APIRouter(
-    prefix="/users",
-    tags=["Users"]
-)
+router = APIRouter()
 
 security = HTTPBearer()
 jwt_handler = JWTBearer()
@@ -37,17 +34,32 @@ create apis for -->
 
 class UserAPIWrapper:
     @router.get("/fetch_user/", response_model=UserSchema)
-    async def fetch_user(user_id : UUID, session: Session = Depends(get_session)):
+    async def fetch_user(credentials: HTTPAuthorizationCredentials = Depends(security), session: Session = Depends(get_session)):
         handler = UserServiceHandler(session)
-        user = handler.get_user_by_id(user_id=user_id)
+        if not credentials.credentials:
+            return ResponseSchema(
+                message="Access Denied",
+                status="Error",
+                status_code=403
+            )
+        user_data = jwt_handler.verify_jwt(credentials.credentials,session)
+        print(f"\n\nuser_data:\n{user_data}\n\n")
+        user = await handler.get_user_by_id(user_id=user_data.get("user_id"))
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         return user
     
     @router.patch("/update_user/", response_model=UserSchema)
-    async def update_user(user_id: UUID, update_data: dict, session: Session = Depends(get_session)):
+    async def update_user( update_data: dict,credentials: HTTPAuthorizationCredentials = Depends(security), session: Session = Depends(get_session)):
         handler = UserServiceHandler(session)
-        updated_user = handler.update_user(user_id=user_id, update_data=update_data)
+        if not credentials.credentials:
+            return ResponseSchema(
+                message="Access Denied",
+                status="Error",
+                status_code=403
+            )
+        user = jwt_handler.verify_jwt(credentials.credentials,session)
+        updated_user = await handler.update_user(user_id=user.get("user_id"), update_data=update_data)
         if not updated_user:
             raise HTTPException(status_code=404, detail="User not found")
         return updated_user
@@ -74,6 +86,12 @@ class PostAPIWrapper:
     async def create_post(self,post_data : dict, credentials: HTTPAuthorizationCredentials = Depends(security)):
         try:
             # fetch user
+            if not credentials.credentials:
+                return ResponseSchema(
+                    message="Access Denied",
+                    status="Error",
+                    status_code=403
+                )
             user = jwt_handler.verify_jwt(credentials.credentials)
             if not user:
                 return ResponseSchema(

@@ -3,12 +3,12 @@
 import time
 from typing import Dict
 import jwt
-from jwt.exceptions import JWTDecodeError
 import os
 from config import settings
 from app.users.crud import UserServiceHandler
 from sqlmodel import Session
 from uuid import UUID
+from asgiref.sync import async_to_sync
 
 
 SECRET_KEY = settings.SECRET_KEY
@@ -46,19 +46,22 @@ def decode_jwt(token: str, session: Session) -> dict | None:
     try:
         handler = UserServiceHandler(session=session)
         decoded_token = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-
+        print(decoded_token)
         if decoded_token["exp"] < time.time():
+            print(1)
             return None
 
         user_id = decoded_token.get("user_id")
         if not user_id:
+            print(0)
             return None
 
-        user = handler.get_user_by_id(user_id=user_id)
+        user = async_to_sync(handler.get_user_by_id)(user_id=user_id)
         if not user or not user.is_active:
+            print(2)
             return None
 
         return decoded_token  # valid payload
-    except JWTDecodeError:
+    except Exception:
         return None
 

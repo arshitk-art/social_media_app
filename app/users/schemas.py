@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, model_validator
+from pydantic import BaseModel, EmailStr, Field, model_validator, ConfigDict
 from uuid import UUID,uuid4
 from datetime import datetime
 
@@ -27,12 +27,27 @@ class UserSchema(BaseModel):
     followers_count: int
     following_count: int
     is_banned: bool
+    password : str
     created_at: datetime
     updated_at: datetime
     is_active: bool
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
+    
+class UserSchemaPartial(BaseModel):
+    id: UUID
+    username: str
+    email : EmailStr
+    full_name : str | None = None
+    bio : str | None = None
+    followers_count: int
+    following_count: int
+    is_banned: bool
+    created_at: datetime
+    updated_at: datetime
+    is_active: bool
+
+    model_config = ConfigDict(from_attributes=True)
 
 class PostCreateSchema(BaseModel):
     title: str = Field(min_length=1, max_length=200)

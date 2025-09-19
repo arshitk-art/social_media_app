@@ -4,9 +4,9 @@ from datetime import datetime
 
 class LoginSchema(BaseModel):
     username: str = Field(min_length=3, max_length=50)
-    email : EmailStr
+    email : EmailStr | None = None
     password: str = Field(..., min_length=6)
-    confirm_password: str = Field(min_length=6)
+    confirm_password: str | None = Field(min_length=6,default=None)
     
 class ResponseSchemaAuth(BaseModel):
     access_token : str

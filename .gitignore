@@ -3,3 +3,4 @@ env/
 __pycache__/
 alembic/
 alembic.ini
+crud-v1.py
